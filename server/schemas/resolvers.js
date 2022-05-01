@@ -15,27 +15,6 @@ const resolvers = {
         }
   
         throw new AuthenticationError('Not logged in');
-      },
-
-      users: async () => {
-        return User.find()
-          .select('-__v -password')
-          .populate('books')
-      },
-
-      user: async (parent, { username }) => {
-        return User.findOne({ username })
-          .select('-__v -password')
-          .populate('books')
-      },
-
-      books: async (parent, { username }) => {
-        const params = username ? { username } : {};
-        return Book.find(params).sort({ createdAt: -1 });
-      },
-
-      book: async (parent, { _id }) => {
-        return Book.findOne({ _id });
       }
     },
 
@@ -67,11 +46,11 @@ const resolvers = {
 
         saveBook: async (parent, args, context) => {
           if (context.user) {
-            const thought = await Book.create({ ...args, username: context.user.username });
+            const book = await Book.create({ ...args, username: context.user.username });
     
             await User.findByIdAndUpdate(
               { _id: context.user._id },
-              { $push: { thoughts: books._id } },
+              { $push: { savedBooks: args } },
               { new: true }
             );
     
@@ -79,6 +58,20 @@ const resolvers = {
           }
     
           throw new AuthenticationError('You need to be logged in!');
+        },
+
+        removeBook: async (parent, {bookId}, context) => {
+            if (context.user) {
+                const book = await Book.create({...args, username: context.user.username });
+
+                await User.findByIdAndUpdate(
+                    { _id: context.user._id },
+                    { $pull: { savedBooks: { bookId: bookId } } },
+                    { new: true }
+                );
+                return book;
+            }
+            throw new AuthenticationError('You need to be logged in!');
         }
       }
 };
